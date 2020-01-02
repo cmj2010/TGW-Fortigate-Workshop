@@ -1,0 +1,618 @@
+AWSTemplateFormatVersion: "2010-09-09" 
+Description: VPC and TGW for FortiGate Solution
+Parameters:
+  KeyPairName:
+    Description: Name of existing EC2 keyPair to enable SSH access to the Instance
+    Type: "AWS::EC2::KeyPair::KeyName"
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: "[\\x20-\\x7E]*"
+    ConstraintDescription:  "Can contain only ASCII characters."
+  #hubCIDRblock:
+  #  Default: 10.0.0.0/16
+  #  Description: CidrBlock of HUB VPC
+  #  Type: "String"
+  #hubSub1:
+  #  Default: 10.0.1.0/24
+  #  Description: CidrBlock of HUB VPC Subnet1
+  #  Type: "AWS::EC2::Subnet::CidrBlock"
+  #hubSub2:
+  #  Default: 10.0.2.0/24
+  #  Description: CidrBlock of HUB VPC Subnet2
+  #  Type: "AWS::EC2::Subnet::CidrBlock"
+  #spoke1CIDRblock:
+  #  Description: CidrBlock of Spoke1 VPC
+  #  Type: "AWS::EC2::VPC::CidrBlock"
+  #  Default: 10.1.0.0/16
+  #spoke1Sub1:
+  #  Description: CidrBlock of Spoke1 VPC Subnet1
+  #  Type: "AWS::EC2::Subnet::CidrBlock"
+  #  Default: 10.1.1.0/24
+  #spoke2CIDRblock:
+  #  Description: CidrBlock of Spoke2 VPC
+  #  Type: "AWS::EC2::VPC::CidrBlock"
+  #  Default: 10.2.0.0/16
+  #spoke2Sub1:
+  #  Description: CidrBlock of Spoke2 VPC Subnet1
+  #  Type: "AWS::EC2::Subnet::CidrBlock"
+  #  Default: 10.2.1.0/24
+  TGWASN:
+    Description: ASN number of TGW (64512 to 65534, 4200000000 to 4294967294)
+    Type: Number
+    Default: 65500
+    ConstraintDescription: "The range is 64512 to 65534 for 16-bit ASNs and 4200000000 to 4294967294 for 32-bit ASNs."
+Mappings: 
+  RegionMap: 
+    ap-east-1:
+      amzlinux2ami: ami-cd86fcbc
+      az1: ap-east-1a
+      az2: ap-east-1b
+    ap-northeast-1:
+      amzlinux2ami: ami-0064e711cbc7a825e
+      az1: ap-northeast-1a
+      az2: ap-northeast-1c
+    ap-northeast-2:
+      amzlinux2ami: ami-02b3330196502d247
+      az1: ap-northeast-2a
+      az2: ap-northeast-2c
+    ap-south-1:
+      amzlinux2ami: ami-040c7ad0a93be494e
+      az1: ap-south-1a
+      az2: ap-south-1b
+    ap-southeast-1:
+      amzlinux2ami: ami-00942d7cd4f3ca5c0
+      az1: ap-southeast-1a
+      az2: ap-southeast-1b
+    ap-southeast-2:
+      amzlinux2ami: ami-08a74056dfd30c986
+      az1: ap-southeast-2a
+      az2: ap-southeast-2b
+    ca-central-1:
+      amzlinux2ami: ami-007dbcbce3118978b
+      az1: ca-central-1a
+      az2: ca-central-1b
+    eu-central-1:
+      amzlinux2ami: ami-0f3a43fbf2d3899f7
+      az1: eu-central-1a
+      az2: eu-central-1b
+    eu-west-1:
+      amzlinux2ami: ami-040ba9174949f6de4
+      az1: eu-west-1a
+      az2: eu-west-1b
+    eu-west-2:
+      amzlinux2ami: ami-00e8b55a2e841be44
+      az1: eu-west-2a
+      az2: eu-west-2b
+    eu-west-3:
+      amzlinux2ami: ami-05a51ff00c1d77571
+      az1: eu-west-3a
+      az2: eu-west-3b
+    sa-east-1:
+      amzlinux2ami: ami-053f8b6627112b46e
+      az1: sa-east-1a
+      az2: sa-east-1b
+    us-east-1:
+      amzlinux2ami: ami-00dc79254d0461090
+      az1: us-east-1a
+      az2: us-east-1c
+    us-east-2:
+      amzlinux2ami: ami-00bf61217e296b409
+      az1: us-east-2a
+      az2: us-east-2b
+    us-west-1:
+      amzlinux2ami: ami-024c80694b5b3e51a
+      az1: us-west-1a
+      az2: us-west-1c
+    us-west-2:
+      amzlinux2ami: ami-0a85857bfc5345c38
+      az1: us-west-2a
+      az2: us-west-2b
+    eu-north-1:
+      amzlinux2ami: ami-0c947472aff72870d
+      az1: eu-north-1
+      az2: eu-north-1
+
+
+Resources:
+  VPCLab1:
+    Type: AWS::EC2::VPC 
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      InstanceTenancy: default 
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      Tags:
+        - Key: Name 
+          Value: HUB_VPC
+        - Key: Environment 
+          Value: Testing
+  HubVPCAZ1TGWSubnet:
+    Type: AWS::EC2::Subnet 
+    Properties:
+      AvailabilityZone: !FindInMap [RegionMap, !Ref "AWS::Region", az1]
+      CidrBlock: 10.0.250.0/24 
+      Tags:
+        - Key: Name
+          Value: HUB_VPC_TGW_Sub1
+      VpcId: !Ref VPCLab1
+  HubVPCAZ1PubSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !FindInMap [RegionMap, !Ref "AWS::Region", az1]
+      CidrBlock: 10.0.0.0/24 
+      Tags:
+        - Key: Name
+          Value: HUB_VPC_Pub_Sub1
+      VpcId: !Ref VPCLab1
+  HubVPCAZ1PriSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !FindInMap [RegionMap, !Ref "AWS::Region", az1]
+      CidrBlock: 10.0.1.0/24 
+      Tags:
+        - Key: Name
+          Value: HUB_VPC_Pri_Sub1
+      VpcId: !Ref VPCLab1
+  HubVPCAZ2TGWSubnet:
+    Type: AWS::EC2::Subnet 
+    Properties:
+      AvailabilityZone: !FindInMap [RegionMap, !Ref "AWS::Region", az2]
+      CidrBlock: 10.0.251.0/24 
+      Tags:
+        - Key: Name
+          Value: HUB_VPC_TGW_Sub2
+      VpcId: !Ref VPCLab1
+  HubVPCAZ2PubSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !FindInMap [RegionMap, !Ref "AWS::Region", az2]
+      CidrBlock: 10.0.2.0/24 
+      Tags:
+        - Key: Name
+          Value: HUB_VPC_Pub_Sub2
+      VpcId: !Ref VPCLab1
+  HubVPCAZ2PriSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !FindInMap [RegionMap, !Ref "AWS::Region", az2]
+      CidrBlock: 10.0.3.0/24 
+      Tags:
+        - Key: Name
+          Value: HUB_VPC_Pri_Sub2
+      VpcId: !Ref VPCLab1
+
+  MyIGWVpc1:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: IGW_HUB_VPC
+  IGWVpc1Attachment:
+    Type: AWS::EC2::VPCGatewayAttachment 
+    Properties:
+      InternetGatewayId: !Ref MyIGWVpc1 
+      VpcId: !Ref VPCLab1
+
+#  RTHubVpcTgwSub:
+#    Type: AWS::EC2::RouteTable 
+#    Properties:
+#      VpcId: !Ref VPCLab1
+#      Tags:
+#        - Key: Name 
+#          Value: RT_HUB_VPC_TGW_Sub
+#  TGWSubRTAssociation1:
+#    Type: AWS::EC2::SubnetRouteTableAssociation 
+#    Properties:
+#      RouteTableId: 
+#        Ref: RTHubVpcTgwSub 
+#      SubnetId: 
+#        Ref: HubVPCAZ1TGWSubnet
+#  TGWSubRTAssociation2:
+#    Type: AWS::EC2::SubnetRouteTableAssociation 
+#    Properties:
+#      RouteTableId: 
+#        Ref: RTHubVpcTgwSub 
+#      SubnetId: 
+#        Ref: HubVPCAZ2TGWSubnet
+  
+  RTHuVPCPriSub:
+    Type: AWS::EC2::RouteTable 
+    Properties:
+      VpcId: !Ref VPCLab1
+      Tags:
+        - Key: Name 
+          Value: RT_HUB_VPC_Pri_Sub
+  PriSubRTAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation 
+    Properties:
+      RouteTableId: 
+        Ref: RTHuVPCPriSub 
+      SubnetId: 
+        Ref: HubVPCAZ1PriSubnet
+
+  PriSubRTAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation 
+    Properties:
+      RouteTableId: 
+        Ref: RTHuVPCPriSub 
+      SubnetId: 
+        Ref: HubVPCAZ2PriSubnet
+
+  RTHuVPCPubSub:
+    Type: AWS::EC2::RouteTable 
+    Properties:
+      VpcId: !Ref VPCLab1
+      Tags:
+        - Key: Name 
+          Value: RT_HUB_VPC_Pub_Sub
+  PubSubRTAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation 
+    Properties:
+      RouteTableId: 
+        Ref: RTHuVPCPubSub 
+      SubnetId: 
+        Ref: HubVPCAZ1PubSubnet
+
+  PubSubRTAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation 
+    Properties:
+      RouteTableId: 
+        Ref: RTHuVPCPubSub 
+      SubnetId: 
+        Ref: HubVPCAZ2PubSubnet
+  
+  InternetforPubSub:
+    Type: AWS::EC2::Route
+    DependsOn: IGWVpc1Attachment
+    Properties:
+      DestinationCidrBlock: "0.0.0.0/0" 
+      GatewayId: !Ref MyIGWVpc1 
+      RouteTableId: !Ref RTHuVPCPubSub
+####################################################
+  VPCSpoke1:
+    Type: AWS::EC2::VPC 
+    Properties:
+      CidrBlock: 10.1.0.0/16
+      InstanceTenancy: default 
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      Tags:
+        - Key: Name 
+          Value: Spoke_VPC1
+        - Key: Environment 
+          Value: Testing
+  VPCSpoke1Subnet:
+    Type: AWS::EC2::Subnet 
+    Properties:
+      AvailabilityZone: !FindInMap [RegionMap, !Ref "AWS::Region", az1]
+      CidrBlock: 10.1.0.0/24 
+      Tags:
+        - Key: Name
+          Value: Spoke_VPC1_Sub1
+      VpcId: !Ref VPCSpoke1
+  VPCSpoke1TGWSubnet:
+    Type: AWS::EC2::Subnet 
+    Properties:
+      AvailabilityZone: !FindInMap [RegionMap, !Ref "AWS::Region", az1]
+      CidrBlock: 10.1.250.0/24 
+      Tags:
+        - Key: Name
+          Value: Spoke_VPC1_TGW_Sub
+      VpcId: !Ref VPCSpoke1
+  MyIGWVpc2:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: IGW_Spoke_VPC1
+  IGWVpc2Attachment:
+    Type: AWS::EC2::VPCGatewayAttachment 
+    Properties:
+      InternetGatewayId: !Ref MyIGWVpc2 
+      VpcId: !Ref VPCSpoke1
+  RTSpokeVPC1:
+    Type: AWS::EC2::RouteTable 
+    Properties:
+      VpcId: !Ref VPCSpoke1
+      Tags:
+        - Key: Name 
+          Value: RT_Spoke_VPC1_Sub1
+  SpokeVPC1RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation 
+    Properties:
+      RouteTableId: 
+        Ref: RTSpokeVPC1 
+      SubnetId: 
+        Ref: VPCSpoke1Subnet
+  
+  InternetforSpoke1Sub:
+    Type: AWS::EC2::Route
+    DependsOn: IGWVpc2Attachment
+    Properties:
+      DestinationCidrBlock: "0.0.0.0/0" 
+      GatewayId: !Ref MyIGWVpc2 
+      RouteTableId: !Ref RTSpokeVPC1
+
+  SGSpokeVPC1:
+    Type: AWS::EC2::SecurityGroup
+    DependsOn: VPCSpoke1
+    Properties:
+      GroupDescription: Allow ssh from internet and ping from other VPC
+      VpcId:
+        Ref: VPCSpoke1
+      SecurityGroupIngress:
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 10.0.0.0/8
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: SG_Spoke_Vpc1
+  EC2SpokeVPC1: 
+    Type: AWS::EC2::Instance
+    DependsOn: SGSpokeVPC1
+    Properties: 
+      AvailabilityZone: !FindInMap [RegionMap, !Ref "AWS::Region", az1]
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", amzlinux2ami]
+      InstanceType: t2.micro
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          GroupSet: 
+            - Ref: "SGSpokeVPC1"
+          SubnetId: 
+            Ref: "VPCSpoke1Subnet"
+          PrivateIpAddress: 10.1.0.100
+      KeyName: !Ref KeyPairName
+      Tags:
+        - Key: Name
+          Value: EC2_Spoke_VPC1
+####################################################
+
+  VPCSpoke2:
+    Type: AWS::EC2::VPC 
+    Properties:
+      CidrBlock: 10.2.0.0/16
+      InstanceTenancy: default 
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      Tags:
+        - Key: Name 
+          Value: Spoke_VPC2
+        - Key: Environment 
+          Value: Testing
+  VPCSpoke2Subnet:
+    Type: AWS::EC2::Subnet 
+    Properties:
+      AvailabilityZone: !FindInMap [RegionMap, !Ref "AWS::Region", az1]
+      CidrBlock: 10.2.0.0/24 
+      Tags:
+        - Key: Name
+          Value: Spoke_VPC2_Sub1
+      VpcId: !Ref VPCSpoke2
+  VPCSpoke2TGWSubnet:
+    Type: AWS::EC2::Subnet 
+    Properties:
+      AvailabilityZone: !FindInMap [RegionMap, !Ref "AWS::Region", az1]
+      CidrBlock: 10.2.250.0/24 
+      Tags:
+        - Key: Name
+          Value: Spoke_VPC2_TGW_Sub
+      VpcId: !Ref VPCSpoke2
+  MyIGWVpc3:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: IGW_Spoke_VPC2
+  IGWVpc3Attachment:
+    Type: AWS::EC2::VPCGatewayAttachment 
+    Properties:
+      InternetGatewayId: !Ref MyIGWVpc3 
+      VpcId: !Ref VPCSpoke2
+  RTSpokeVPC2:
+    Type: AWS::EC2::RouteTable 
+    Properties:
+      VpcId: !Ref VPCSpoke2
+      Tags:
+        - Key: Name 
+          Value: RT_Spoke_VPC2_Sub1
+  SpokeVPC2RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation 
+    Properties:
+      RouteTableId: 
+        Ref: RTSpokeVPC2 
+      SubnetId: 
+        Ref: VPCSpoke2Subnet
+  
+  InternetforSpoke2Sub:
+    Type: AWS::EC2::Route
+    DependsOn: IGWVpc3Attachment
+    Properties:
+      DestinationCidrBlock: "0.0.0.0/0" 
+      GatewayId: !Ref MyIGWVpc3
+      RouteTableId: !Ref RTSpokeVPC2
+
+  SGSpokeVPC2:
+    Type: AWS::EC2::SecurityGroup
+    DependsOn: VPCSpoke2
+    Properties:
+      GroupDescription: Allow ssh from internet and ping from other VPC
+      VpcId:
+        Ref: VPCSpoke2
+      SecurityGroupIngress:
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 10.0.0.0/8
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: SG_Spoke_Vpc2
+  EC2SpokeVPC2: 
+    Type: AWS::EC2::Instance
+    DependsOn: SGSpokeVPC2
+    Properties: 
+      AvailabilityZone: !FindInMap [RegionMap, !Ref "AWS::Region", az1]
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", amzlinux2ami]
+      InstanceType: t2.micro
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          GroupSet: 
+            - Ref: "SGSpokeVPC2"
+          SubnetId: 
+            Ref: "VPCSpoke2Subnet"
+          PrivateIpAddress: 10.2.0.100
+      KeyName: !Ref KeyPairName
+      Tags:
+        - Key: Name
+          Value: EC2_Spoke_VPC2
+
+####################################################
+  myTransitGateway:
+    Type: "AWS::EC2::TransitGateway"
+    Properties:
+      AmazonSideAsn: !Ref 'TGWASN'
+      Description: "TGW Route Integration Test"
+      AutoAcceptSharedAttachments: "disable"
+      DefaultRouteTableAssociation: "disable"
+      DnsSupport: "enable"
+      VpnEcmpSupport: "enable"
+      Tags:
+      - Key: Name
+        Value: Lab_TGW1
+  hubVPCAttachment:
+    Type: AWS::EC2::TransitGatewayAttachment
+    Properties: 
+      SubnetIds: 
+        - !Ref HubVPCAZ1TGWSubnet
+        - !Ref HubVPCAZ2TGWSubnet
+      Tags: 
+        - Key: Name
+          Value: hub_VPC
+      TransitGatewayId: !Ref myTransitGateway
+      VpcId: !Ref VPCLab1
+  SpokeVPC1Attachment:
+    Type: AWS::EC2::TransitGatewayAttachment
+    Properties: 
+      SubnetIds: 
+        - !Ref VPCSpoke1TGWSubnet
+      Tags: 
+        - Key: Name
+          Value: Spoke_VPC1
+      TransitGatewayId: !Ref myTransitGateway
+      VpcId: !Ref VPCSpoke1
+  SpokeVPC2Attachment:
+    Type: AWS::EC2::TransitGatewayAttachment
+    Properties: 
+      SubnetIds: 
+        - !Ref VPCSpoke2TGWSubnet
+      Tags: 
+        - Key: Name
+          Value: Spoke_VPC2
+      TransitGatewayId: !Ref myTransitGateway
+      VpcId: !Ref VPCSpoke2
+  TGWRT1:
+    Type: AWS::EC2::TransitGatewayRouteTable
+    Properties: 
+      Tags: 
+       - Key: Name
+         Value: Route_Table_Spoke
+      TransitGatewayId: !Ref myTransitGateway
+  RouteforRT1:
+    Type: AWS::EC2::TransitGatewayRoute
+    Properties: 
+      Blackhole: false
+      DestinationCidrBlock: 0.0.0.0/0
+      TransitGatewayAttachmentId: !Ref hubVPCAttachment
+      TransitGatewayRouteTableId: !Ref TGWRT1
+  RT1AssociatewithSpoke1:
+    Type: AWS::EC2::TransitGatewayRouteTableAssociation
+    Properties: 
+      TransitGatewayAttachmentId: !Ref SpokeVPC1Attachment
+      TransitGatewayRouteTableId: !Ref TGWRT1
+  RT1AssociatewithSpoke2:
+    Type: AWS::EC2::TransitGatewayRouteTableAssociation
+    Properties: 
+      TransitGatewayAttachmentId: !Ref SpokeVPC2Attachment
+      TransitGatewayRouteTableId: !Ref TGWRT1
+  TGWRT2:
+    Type: AWS::EC2::TransitGatewayRouteTable
+    Properties: 
+      Tags: 
+       - Key: Name
+         Value: Route_Table_Hub
+      TransitGatewayId: !Ref myTransitGateway
+  spoke1propergate:
+    Type: AWS::EC2::TransitGatewayRouteTablePropagation
+    Properties: 
+      TransitGatewayAttachmentId: !Ref SpokeVPC1Attachment
+      TransitGatewayRouteTableId: !Ref TGWRT2
+  spoke2propergate:
+    Type: AWS::EC2::TransitGatewayRouteTablePropagation
+    Properties: 
+      TransitGatewayAttachmentId: !Ref SpokeVPC2Attachment
+      TransitGatewayRouteTableId: !Ref TGWRT2
+  RT2AssociatewithHub:
+    Type: AWS::EC2::TransitGatewayRouteTableAssociation
+    Properties: 
+      TransitGatewayAttachmentId: !Ref hubVPCAttachment
+      TransitGatewayRouteTableId: !Ref TGWRT2
+####################################################
+  rt1SpokeVpc1addtgw:
+    Type: AWS::EC2::Route
+    DependsOn: SpokeVPC1Attachment
+    Properties:
+      DestinationCidrBlock: "10.2.0.0/16" 
+      TransitGatewayId: !Ref myTransitGateway 
+      RouteTableId: !Ref RTSpokeVPC1
+  rt2SpokeVpc2addtgw:
+    Type: AWS::EC2::Route
+    DependsOn: SpokeVPC2Attachment
+    Properties:
+      DestinationCidrBlock: "10.1.0.0/16" 
+      TransitGatewayId: !Ref myTransitGateway 
+      RouteTableId: !Ref RTSpokeVPC2
+  rt3HubVpcaddtgw:
+    Type: AWS::EC2::Route
+    DependsOn: hubVPCAttachment
+    Properties:
+      DestinationCidrBlock: "10.1.0.0/16" 
+      TransitGatewayId: !Ref myTransitGateway 
+      RouteTableId: !Ref RTHuVPCPriSub
+  rt4HubVpcaddtgw:
+    Type: AWS::EC2::Route
+    DependsOn: hubVPCAttachment
+    Properties:
+      DestinationCidrBlock: "10.2.0.0/16" 
+      TransitGatewayId: !Ref myTransitGateway 
+      RouteTableId: !Ref RTHuVPCPriSub
+
+
+####################################################
+Outputs:
+  VPCHubID:
+    Description: The ID of the HUB VPC
+    Value: !Ref VPCLab1
+  VPCSpoke1ID:
+    Description: The ID of the Spoke VPC1
+    Value: !Ref VPCSpoke1
+  VPCSpoke2ID:
+    Description: The ID of the Spoke VPC2
+    Value: !Ref VPCSpoke2
+  RouteTableID1:
+    Description: The private route table of the HUB VPC
+    Value: !Ref RTHuVPCPriSub
+#  RouteTableID2:
+#    Description: Save this ID - The tgw route table of the HUB VPC
+#    Value: !Ref RTHubVpcTgwSub
+
+
