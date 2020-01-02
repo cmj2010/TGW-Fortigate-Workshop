@@ -8,34 +8,6 @@ Parameters:
     MaxLength: 255
     AllowedPattern: "[\\x20-\\x7E]*"
     ConstraintDescription:  "Can contain only ASCII characters."
-  #hubCIDRblock:
-  #  Default: 10.0.0.0/16
-  #  Description: CidrBlock of HUB VPC
-  #  Type: "String"
-  #hubSub1:
-  #  Default: 10.0.1.0/24
-  #  Description: CidrBlock of HUB VPC Subnet1
-  #  Type: "AWS::EC2::Subnet::CidrBlock"
-  #hubSub2:
-  #  Default: 10.0.2.0/24
-  #  Description: CidrBlock of HUB VPC Subnet2
-  #  Type: "AWS::EC2::Subnet::CidrBlock"
-  #spoke1CIDRblock:
-  #  Description: CidrBlock of Spoke1 VPC
-  #  Type: "AWS::EC2::VPC::CidrBlock"
-  #  Default: 10.1.0.0/16
-  #spoke1Sub1:
-  #  Description: CidrBlock of Spoke1 VPC Subnet1
-  #  Type: "AWS::EC2::Subnet::CidrBlock"
-  #  Default: 10.1.1.0/24
-  #spoke2CIDRblock:
-  #  Description: CidrBlock of Spoke2 VPC
-  #  Type: "AWS::EC2::VPC::CidrBlock"
-  #  Default: 10.2.0.0/16
-  #spoke2Sub1:
-  #  Description: CidrBlock of Spoke2 VPC Subnet1
-  #  Type: "AWS::EC2::Subnet::CidrBlock"
-  #  Default: 10.2.1.0/24
   TGWASN:
     Description: ASN number of TGW (64512 to 65534, 4200000000 to 4294967294)
     Type: Number
@@ -192,28 +164,6 @@ Resources:
     Properties:
       InternetGatewayId: !Ref MyIGWVpc1 
       VpcId: !Ref VPCLab1
-
-#  RTHubVpcTgwSub:
-#    Type: AWS::EC2::RouteTable 
-#    Properties:
-#      VpcId: !Ref VPCLab1
-#      Tags:
-#        - Key: Name 
-#          Value: RT_HUB_VPC_TGW_Sub
-#  TGWSubRTAssociation1:
-#    Type: AWS::EC2::SubnetRouteTableAssociation 
-#    Properties:
-#      RouteTableId: 
-#        Ref: RTHubVpcTgwSub 
-#      SubnetId: 
-#        Ref: HubVPCAZ1TGWSubnet
-#  TGWSubRTAssociation2:
-#    Type: AWS::EC2::SubnetRouteTableAssociation 
-#    Properties:
-#      RouteTableId: 
-#        Ref: RTHubVpcTgwSub 
-#      SubnetId: 
-#        Ref: HubVPCAZ2TGWSubnet
   
   RTHuVPCPriSub:
     Type: AWS::EC2::RouteTable 
@@ -611,8 +561,6 @@ Outputs:
   RouteTableID1:
     Description: The private route table of the HUB VPC
     Value: !Ref RTHuVPCPriSub
-#  RouteTableID2:
-#    Description: Save this ID - The tgw route table of the HUB VPC
-#    Value: !Ref RTHubVpcTgwSub
+
 
 
